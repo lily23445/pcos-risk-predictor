@@ -1,60 +1,101 @@
+# app.py
 import streamlit as st
 import pandas as pd
+import os
 import pickle
-import sklearn
+from datetime import date
 
-st.title("PCOS Risk Input Form")
-
+# Load model
 model = pickle.load(open("pcos_model.pkl", "rb"))
 
-age = st.number_input("Age (years)", min_value=10, max_value=60, value=25)
-bmi = st.number_input("BMI", min_value=10.0, max_value=50.0, value=22.0)
-cycle_length = st.number_input("Cycle Length (days)", min_value=15, max_value=60, value=28)
+st.title("🩺 PCOS 30-Day Symptom Tracker")
 
-weight_gain = st.radio("Weight gain", ["No", "Yes"])
-hair_growth = st.radio("Hair growth", ["No", "Yes"])
-skin_darkening = st.radio("Skin darkening", ["No", "Yes"])
-pimples = st.radio("Pimples", ["No", "Yes"])
-hair_loss = st.radio("Hair loss", ["No", "Yes"])
+# File to store daily data
+DATA_FILE = "user_30_day_data.csv"
 
-fast_food = st.radio("Fast food consumption", ["No", "Yes"])
-exercise = st.radio("Regular Exercise", ["No", "Yes"])
+# Input form
+st.subheader("Day-wise Symptom Entry")
+with st.form("daily_form"):
+    st.markdown("### Fill today's details")
 
-tsh = st.number_input("TSH (mIU/L)", min_value=0.0, max_value=10.0, value=2.0)
-lh = st.number_input("LH (mIU/mL)", min_value=0.0, max_value=50.0, value=5.0)
-fsh = st.number_input("FSH (mIU/mL)", min_value=0.0, max_value=50.0, value=6.0)
-amh = st.number_input("AMH (ng/mL)", min_value=0.0, max_value=15.0, value=3.0)
-prl = st.number_input("PRL (ng/mL)", min_value=0.0, max_value=100.0, value=20.0)
+    age = st.number_input("Age (yrs)", min_value=10, max_value=60)
+    bmi = st.number_input("BMI", min_value=10.0, max_value=60.0)
+    tsh = st.number_input("TSH (mIU/L)", min_value=0.0)
+    lh = st.number_input("LH (mIU/mL)", min_value=0.0)
+    fsh = st.number_input("FSH (mIU/mL)", min_value=0.0)
+    amh = st.number_input("AMH (ng/mL)", min_value=0.0)
+    prl = st.number_input("PRL (ng/mL)", min_value=0.0)
 
-def yn_to_num(val):
-    return 1 if val == "Yes" else 0
+    wg = st.selectbox("Weight Gain (Y/N)", ["0", "1"])
+    hg = st.selectbox("Hair Growth (Y/N)", ["0", "1"])
+    sd = st.selectbox("Skin Darkening (Y/N)", ["0", "1"])
+    pimples = st.selectbox("Pimples (Y/N)", ["0", "1"])
+    hair_loss = st.selectbox("Hair Loss (Y/N)", ["0", "1"])
 
-if st.button("Predict Risk"):
-    data = {
-        " Age (yrs)": age,
+    submitted = st.form_submit_button("Submit")
+
+if submitted:
+    today = str(date.today())
+
+    entry = {
+        "Date": today,
+        "Age": age,
         "BMI": bmi,
-        "TSH (mIU/L)": tsh,
-        "LH(mIU/mL)": lh,
-        "FSH(mIU/mL)": fsh,
-        "AMH(ng/mL)": amh,
-        "PRL(ng/mL)": prl,
-        "Weight gain(Y/N)": yn_to_num(weight_gain),
-        "hair growth(Y/N)": yn_to_num(hair_growth),  # note lowercase "hair"
-        "Skin darkening (Y/N)": yn_to_num(skin_darkening),
-        "Pimples(Y/N)": yn_to_num(pimples),
-        "Hair loss(Y/N)": yn_to_num(hair_loss)
+        "TSH": tsh,
+        "LH": lh,
+        "FSH": fsh,
+        "AMH": amh,
+        "PRL": prl,
+        "Weight gain(Y/N)": wg,
+        "hair growth(Y/N)": hg,
+        "Skin darkening (Y/N)": sd,
+        "Pimples(Y/N)": pimples,
+        "Hair loss(Y/N)": hair_loss,
     }
 
-    input_df = pd.DataFrame([data])
-
-    input_df = pd.DataFrame([data])
-
-    risk = model.predict_proba(input_df)[:, 1][0]
-    st.write(f"PCOS Risk Score: {risk*100:.2f}%")
-
-    if risk > 0.7:
-        st.error("High Risk – Consult a doctor.")
-    elif risk > 0.4:
-        st.warning("Moderate Risk – Monitor symptoms.")
+    if os.path.exists(DATA_FILE):
+        df = pd.read_csv(DATA_FILE)
+        if today in df["Date"].values:
+            st.warning("You’ve already submitted data for today!")
+        else:
+            df = pd.concat([df, pd.DataFrame([entry])], ignore_index=True)
+            df.to_csv(DATA_FILE, index=False)
+            st.success("Entry submitted successfully!")
     else:
-        st.success("Low Risk – Maintain healthy habits.")
+        df = pd.DataFrame([entry])
+        df.to_csv(DATA_FILE, index=False)
+        st.success("Entry submitted successfully!")
+
+if os.path.exists(DATA_FILE):
+    df = pd.read_csv(DATA_FILE)
+    st.info(f"🗓️ Days logged: {df.shape[0]}/30")
+
+    if df.shape[0] == 1:
+        st.success("✅ You've completed 30 days! Generating prediction...")
+
+        # Drop date column
+        df_features = df.drop("Date", axis=1)
+
+        # Convert all to numeric (if not already)
+        df_features = df_features.apply(pd.to_numeric)
+
+        # Option 1: Use average values across 30 days
+        input_vector = df_features.mean().values.reshape(1, -1)
+
+        prediction = model.predict(input_vector)[0]
+        score = model.predict_proba(input_vector)[0][1]
+
+        st.markdown(f"### 🧠 Model Prediction: {'Positive' if prediction == 1 else 'Negative'}")
+        st.markdown(f"**Confidence Score:** {score:.2f}")
+
+        # Risk interpretation
+        if score > 0.7:
+            st.error("⚠️ **High risk of PCOS. Please consult a gynecologist.**")
+        elif score > 0.5:
+            st.warning("🟠 **Moderate risk. Keep tracking symptoms and consider medical advice.**")
+        else:
+            st.success("🟢 **Low risk. PCOS is unlikely based on your data.**")
+
+        if st.button("Clear and Restart Tracking"):
+            os.remove(DATA_FILE)
+            st.info("Tracker reset. You can start logging again.")
