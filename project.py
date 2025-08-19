@@ -70,8 +70,8 @@ if os.path.exists(DATA_FILE):
     df = pd.read_csv(DATA_FILE)
     st.info(f"🗓️ Days logged: {df.shape[0]}/2")
 
-    if df.shape[0] == 2:
-        st.success("✅ You've completed 2 days! Generating prediction...")
+    if df.shape[0] == 30:
+        st.success("✅ You've completed 30 days! Generating prediction...")
 
         # Drop date column
         df_features = df.drop("Date", axis=1)
