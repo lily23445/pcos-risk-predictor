@@ -68,7 +68,7 @@ if submitted:
 
 if os.path.exists(DATA_FILE):
     df = pd.read_csv(DATA_FILE)
-    st.info(f"🗓️ Days logged: {df.shape[0]}/2")
+    st.info(f"🗓️ Days logged: {df.shape[0]}/30")
 
     if df.shape[0] == 30:
         st.success("✅ You've completed 30 days! Generating prediction...")
