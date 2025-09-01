@@ -1,7 +1,0 @@
-[theme]
-primaryColor="#e91e63"
-backgroundColor="#974261"
-secondaryBackgroundColor="#ac7c84"
-textColor="#ffffff"
-[client]
-showSidebarNavigation = false        # hide the automatic page list
