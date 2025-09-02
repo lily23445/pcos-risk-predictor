@@ -32,6 +32,6 @@ if not st.user.is_logged_in:
     st.stop()                           # wait for redirect
 # authenticated view
 st.balloons()
-st.success(f"Welcome back, {st.user.name}!")
+st.success(f"Welcome back, {st.user}!")
 
 st.switch_page("pages/homepage.py")
