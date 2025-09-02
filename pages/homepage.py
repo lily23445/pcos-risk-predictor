@@ -3,10 +3,29 @@ import streamlit as st
 from datetime import date
 import utils.storage as store
 
-email = st.user.email
-if not st.user.is_logged_in:
-    st.switch_page("Login.py")
+# ---- 2. SAFE ACCESS TO st.user ----
+if hasattr(st, "user") and st.user:              # user object exists and is truthy
+    email = getattr(st.user, "email", None)      # pull email safely
+    if email:
+        st.success(f"Welcome, {email}!")         # ✅ Authenticated flow
 
+        # ---------- Authenticated area ----------
+        # Put the rest of your homepage logic here
+        st.write("Here’s your personalized dashboard…")
+        # e.g. call your ML model, display charts, etc.
+
+    else:
+        # User object present but no email yet (rare)
+        st.warning("Signed in, but we couldn't retrieve your email.")
+        st.button("Refresh")
+
+else:
+    # No auth or viewer is anonymous
+    st.error(
+        "You’re not logged in. Please use the **Sign in** button "
+        "in the top-right corner first."
+    )
+    st.stop()
 import utils.nav as nav
 nav.render_menu()
 
@@ -68,8 +87,8 @@ card_defs = [
     ("📝 Daily Log",      "Daily_log", "Enter today’s symptoms"),
     ("📊 View Cycle",     "view_cycle", "See progress & risk"),
     ("💪 Exercise",       "exercise_recipie", "Workout suggestions"),
-    # ("🥗 Diet",           "pages/5_🥗_Diet_Module.py", "Nutrition guidance"),
-    # ("⚙️ Settings",       "pages/6_⚙️_Settings.py", "Reset or export data")
+    ("🥗 Diet",           "pages/5_🥗_Diet_Module.py", "Nutrition guidance"),
+    ("⚙️ Settings",       "pages/6_⚙️_Settings.py", "Reset or export data")
 ]
 
 
@@ -83,9 +102,4 @@ for i, (label, target, subtitle) in enumerate(card_defs):
                     f"<button class='hero-btn' style='font-size:0.9rem;padding:0.5rem 1.4rem;'>Open</button>"
                     f"</a></div>", unsafe_allow_html=True)
 
-if st.sidebar.button("Log out"):
-    st.logout()
-# ---------- footer ----------
-st.markdown("<br><hr style='margin:2rem 0;'>"
-            "<p style='text-align:center;font-size:0.8rem;'>© 2025 PCOS Care Hub</p>",
-            unsafe_allow_html=True)
+
