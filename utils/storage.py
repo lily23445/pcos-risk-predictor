@@ -17,7 +17,6 @@ def save_profile(email: str, profile: dict) -> None:
     )
 
 def load_profile(email: str) -> dict | None:
-    """Load the profile dict; return None if the file is missing."""
     p = _user_dir(email)/"profile.json"
     return json.loads(p.read_text()) if p.exists() else None
 # ---------- daily log ----------
