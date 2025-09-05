@@ -3,6 +3,7 @@ import streamlit as st
 from datetime import date
 import utils.storage as store
 import utils.nav as nav
+nav.render_menu()
 
 # ---- page config ----
 st.set_page_config(page_title="PCOS Care Hub",
@@ -18,14 +19,7 @@ if not email:
     st.stop()
 
 # ---- navbar + sidebar ----
-nav.render_menu()
 
-st.sidebar.success(f"Logged in as {email}")
-if st.sidebar.button("Logout"):
-    for key in ["email", "token", "state"]:
-        st.session_state.pop(key, None)
-    st.switch_page("Login.py")
-    st.stop()
 
 # ---- page-wide style ----
 st.markdown("""

@@ -1,5 +1,6 @@
 import streamlit as st
 
+# ---------- page config ----------
 st.set_page_config(page_title="Login", page_icon="🔐", layout="centered")
 
 # ---------- custom CSS ----------
@@ -16,11 +17,8 @@ button[kind="primary"]{border-radius:50px;font-size:1.1rem;padding:.7rem 2.5rem;
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- check session ----------
-email = st.session_state.get("email")
-
-if not email:
-    # unauthenticated view
+# ---------- unauthenticated view ----------
+if st.user is None:                     # viewer NOT logged in
     st.markdown("""
     <div class="container">
         <div style="font-size:4rem;margin-bottom:.8rem;">🩺</div>
@@ -31,19 +29,18 @@ if not email:
 
     if st.button("Login with Google"):
         try:
-            userinfo = st.login("google")  # ✅ Community Cloud only
-            # store email in session
-            st.session_state["email"] = userinfo["email"]
-            st.rerun()
+            st.login("google")          # works only on Community Cloud
         except AttributeError:
             st.error(
-                "Google sign-in works only on Streamlit Community Cloud. "
-                "Running locally? You'll need to set up your own OAuth."
+                "Google sign-in is available after you deploy to "
+                "Streamlit Community Cloud. Running locally? "
+                "Comment out st.stop() to bypass auth."
             )
-        st.stop()
+        st.stop()                           # halt until OAuth completes
 
-else:
-    # authenticated view
-    st.success(f"Welcome back, {email}!")
-    st.balloons()
-    st.switch_page("pages/homepage.py")
+# ---------- authenticated view ----------
+st.balloons()
+st.success(f"Welcome back, {st.user}!")
+
+# hand off to the main app
+st.switch_page("pages/homepage.py")
