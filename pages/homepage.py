@@ -1,49 +1,36 @@
-# pages/homepage.py
 import streamlit as st
 from datetime import date
-import utils.storage as store
-import utils.nav as nav
-nav.render_menu()
+import utils.storage as store           # adjust import paths as needed
 
-# ---- page config ----
+# ---------- session guard ----------
+email = st.session_state.get("email")
+if email is None:
+    st.switch_page("Login.py")
+
+# ---------- page config ----------
 st.set_page_config(page_title="PCOS Care Hub",
                    page_icon="🩺",
                    layout="wide",
                    initial_sidebar_state="collapsed")
 
-# ---- auth guard ----
-email = st.session_state.get("email")
-if not email:
-    st.error("You must log in with Google first.")
-    st.switch_page("Login.py")
-    st.stop()
-
-# ---- navbar + sidebar ----
-
-
-# ---- page-wide style ----
+# ---------- page-wide style ----------
 st.markdown("""
 <style>
-:root{
-  --primary:#1565C0;
-  --accent:#43A047;
-}
+:root{ --primary:#1565C0; --accent:#43A047; }
 html, body {font-family:'Inter',sans-serif;}
 h1, h2, h3 {color:var(--primary);}
 .hero-btn{
-  background:var(--primary);
-  color:#fff;
-  padding:0.8rem 2.2rem;
-  border:none;border-radius:6px;font-size:1.15rem;
+  background:var(--primary); color:#fff; padding:0.8rem 2.2rem;
+  border:none; border-radius:6px; font-size:1.15rem;
 }
 .hero-btn:hover{background:#104d99;}
-.tiny{text-transform:uppercase;letter-spacing:0.1rem;font-size:0.7rem;color:grey;}
-.card{border:1px solid #eee;border-radius:8px;padding:1rem;text-align:center;}
+.tiny{ text-transform:uppercase; letter-spacing:0.1rem; font-size:0.7rem; color:grey; }
+.card{ border:1px solid #eee; border-radius:8px; padding:1rem; text-align:center; }
 .card:hover{box-shadow:0 4px 12px rgba(0,0,0,0.05);}
 </style>
 """, unsafe_allow_html=True)
 
-# ---- hero section ----
+# ---------- hero section ----------
 st.markdown("<div style='padding:4rem 2rem;text-align:center;'>", unsafe_allow_html=True)
 st.markdown("## 🩺 **PCOS 30-Day Care Hub**")
 st.write("Track daily symptoms, understand your cycle risk, and get lifestyle guidance — all in one place.")
@@ -54,38 +41,53 @@ with cta_col:
     st.page_link("pages/Profile.py", label="Get started →", icon="👤")
 st.markdown("</div>", unsafe_allow_html=True)
 
-# ---- quick status tiles ----
+# ---------- quick status tiles ----------
 profile_ready = store.load_profile(email) is not None
-days_done     = store.read_daily(email).shape[0]
+daily_df      = store.read_daily(email)
+days_done     = len(daily_df) if daily_df is not None else 0
 
 st.markdown("#### Today’s status")
-scol1, scol2, scol3 = st.columns(3)
-scol1.metric("Profile", "Set" if profile_ready else "Missing",
-             delta="✓" if profile_ready else "●")
-scol2.metric("Days logged", f"{days_done}/30",
-             delta=None if days_done==0 else f"+{days_done}")
-scol3.metric("Date", date.today().strftime("%b %d, %Y"))
+c1, c2, c3 = st.columns(3)
+c1.metric("Profile", "Set" if profile_ready else "Missing",
+          delta="✓" if profile_ready else "●")
+c2.metric("Days logged", f"{days_done}/30",
+          delta=None if days_done==0 else f"+{days_done}")
+c3.metric("Date", date.today().strftime("%b %d, %Y"))
 
-# ---- navigation cards ----
+# ---------- navigation cards ----------
+# ----- navigation cards -------------------------------------------------
 st.divider()
 st.markdown("#### Navigate")
 
 card_defs = [
-    ("👤 Profile" ,      "Profile",  "One-time medical details"),
-    ("📝 Daily Log",     "Daily_log", "Enter today’s symptoms"),
-    ("📊 View Cycle",    "view_cycle", "See progress & risk"),
-    ("💪 Exercise",      "exercise_recipie", "Workout suggestions"),
-    ("🥗 Diet",          "pages/5_🥗_Diet_Module.py", "Nutrition guidance"),
-    ("⚙️ Settings",      "pages/6_⚙️_Settings.py", "Reset or export data")
+    ("👤 Profile",   "pages/Profile.py",          "One-time medical details"),
+    ("📝 Daily Log", "pages/Daily_log.py",        "Enter today’s symptoms"),
+    ("📊 View Cycle","pages/view_cycle.py",       "See progress & risk"),
+    ("💪 Exercise",  "pages/exercise_recipie.py", "Workout suggestions"),
+    # ("🥗 Diet",    "pages/Diet_Module.py",      "Nutrition guidance"),
+    ("⚙️ Settings",  "pages/settings.py",        "Reset or export data"),
 ]
 
-rows = st.columns(3)
+cols = st.columns(3)
 for i, (label, target, subtitle) in enumerate(card_defs):
-    with rows[i % 3]:
+    with cols[i % 3]:
+        # 1️⃣ draw the surrounding “card” box
         st.markdown(
-            f"<div class='card'><b>{label}</b><br><span class='tiny'>{subtitle}</span><br><br>"
-            f"<a href='/{target}' target='_self' style='text-decoration:none;'>"
-            f"<button class='hero-btn' style='font-size:0.9rem;padding:0.5rem 1.4rem;'>Open</button>"
-            f"</a></div>",
-            unsafe_allow_html=True
+            f"""
+            <div class="card">
+              <b>{label}</b><br>
+              <span class="tiny">{subtitle}</span><br><br>
+            """,
+            unsafe_allow_html=True,
         )
+
+        # 2️⃣ clean page_link call – NO unsafe_allow_html here
+        st.page_link(
+            target,
+            label="Open",
+            icon="➡️",
+            use_container_width=True
+        )
+
+        # 3️⃣ close the <div>
+        st.markdown("</div>", unsafe_allow_html=True)

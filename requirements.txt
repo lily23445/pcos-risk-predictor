@@ -1,4 +1,5 @@
-streamlit
 scikit-learn
 numpy
 pandas
+streamlit>=1.42.0
+authlib>=1.3.2       # required for st.login("google")
