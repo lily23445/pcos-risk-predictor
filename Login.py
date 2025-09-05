@@ -1,9 +1,8 @@
 import streamlit as st
 
-# ---------- page config ----------
 st.set_page_config(page_title="Login", page_icon="🔐", layout="centered")
 
-# ---------- custom CSS for pizzazz ----------
+# ---------- custom CSS ----------
 st.markdown("""
 <style>
 body            {background:#FFF5F5;}
@@ -17,8 +16,11 @@ button[kind="primary"]{border-radius:50px;font-size:1.1rem;padding:.7rem 2.5rem;
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- unauthenticated view ----------
-if not st.user.is_logged_in:
+# ---------- check session ----------
+email = st.session_state.get("email")
+
+if not email:
+    # unauthenticated view
     st.markdown("""
     <div class="container">
         <div style="font-size:4rem;margin-bottom:.8rem;">🩺</div>
@@ -28,10 +30,20 @@ if not st.user.is_logged_in:
     """, unsafe_allow_html=True)
 
     if st.button("Login with Google"):
-        st.login("google")              # native OAuth call
-    st.stop()                           # wait for redirect
-# authenticated view
-st.balloons()
-st.success(f"Welcome back, {st.user}!")
+        try:
+            userinfo = st.login("google")  # ✅ Community Cloud only
+            # store email in session
+            st.session_state["email"] = userinfo["email"]
+            st.rerun()
+        except AttributeError:
+            st.error(
+                "Google sign-in works only on Streamlit Community Cloud. "
+                "Running locally? You'll need to set up your own OAuth."
+            )
+        st.stop()
 
-st.switch_page("pages/homepage.py")
+else:
+    # authenticated view
+    st.success(f"Welcome back, {email}!")
+    st.balloons()
+    st.switch_page("pages/homepage.py")

@@ -1,40 +1,33 @@
-# Home.py
+# pages/homepage.py
 import streamlit as st
 from datetime import date
 import utils.storage as store
-
-# ---- 2. SAFE ACCESS TO st.user ----
-if hasattr(st, "user") and st.user:              # user object exists and is truthy
-    email = getattr(st.user, "email", None)      # pull email safely
-    if email:
-        st.success(f"Welcome, {email}!")         # ✅ Authenticated flow
-
-        # ---------- Authenticated area ----------
-        # Put the rest of your homepage logic here
-        st.write("Here’s your personalized dashboard…")
-        # e.g. call your ML model, display charts, etc.
-
-    else:
-        # User object present but no email yet (rare)
-        st.warning("Signed in, but we couldn't retrieve your email.")
-        st.button("Refresh")
-
-else:
-    # No auth or viewer is anonymous
-    st.error(
-        "You’re not logged in. Please use the **Sign in** button "
-        "in the top-right corner first."
-    )
-    st.stop()
 import utils.nav as nav
-nav.render_menu()
 
-# ---------- page-wide style ----------
+# ---- page config ----
 st.set_page_config(page_title="PCOS Care Hub",
                    page_icon="🩺",
                    layout="wide",
                    initial_sidebar_state="collapsed")
 
+# ---- auth guard ----
+email = st.session_state.get("email")
+if not email:
+    st.error("You must log in with Google first.")
+    st.switch_page("Login.py")
+    st.stop()
+
+# ---- navbar + sidebar ----
+nav.render_menu()
+
+st.sidebar.success(f"Logged in as {email}")
+if st.sidebar.button("Logout"):
+    for key in ["email", "token", "state"]:
+        st.session_state.pop(key, None)
+    st.switch_page("Login.py")
+    st.stop()
+
+# ---- page-wide style ----
 st.markdown("""
 <style>
 :root{
@@ -56,7 +49,7 @@ h1, h2, h3 {color:var(--primary);}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- hero section ----------
+# ---- hero section ----
 st.markdown("<div style='padding:4rem 2rem;text-align:center;'>", unsafe_allow_html=True)
 st.markdown("## 🩺 **PCOS 30-Day Care Hub**")
 st.write("Track daily symptoms, understand your cycle risk, and get lifestyle guidance — all in one place.")
@@ -67,7 +60,7 @@ with cta_col:
     st.page_link("pages/Profile.py", label="Get started →", icon="👤")
 st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------- quick status tiles ----------
+# ---- quick status tiles ----
 profile_ready = store.load_profile(email) is not None
 days_done     = store.read_daily(email).shape[0]
 
@@ -79,27 +72,26 @@ scol2.metric("Days logged", f"{days_done}/30",
              delta=None if days_done==0 else f"+{days_done}")
 scol3.metric("Date", date.today().strftime("%b %d, %Y"))
 
-# ---------- navigation cards ----------
+# ---- navigation cards ----
 st.divider()
 st.markdown("#### Navigate")
+
 card_defs = [
     ("👤 Profile" ,      "Profile",  "One-time medical details"),
-    ("📝 Daily Log",      "Daily_log", "Enter today’s symptoms"),
-    ("📊 View Cycle",     "view_cycle", "See progress & risk"),
-    ("💪 Exercise",       "exercise_recipie", "Workout suggestions"),
-    ("🥗 Diet",           "pages/5_🥗_Diet_Module.py", "Nutrition guidance"),
-    ("⚙️ Settings",       "pages/6_⚙️_Settings.py", "Reset or export data")
+    ("📝 Daily Log",     "Daily_log", "Enter today’s symptoms"),
+    ("📊 View Cycle",    "view_cycle", "See progress & risk"),
+    ("💪 Exercise",      "exercise_recipie", "Workout suggestions"),
+    ("🥗 Diet",          "pages/5_🥗_Diet_Module.py", "Nutrition guidance"),
+    ("⚙️ Settings",      "pages/6_⚙️_Settings.py", "Reset or export data")
 ]
-
-
-
 
 rows = st.columns(3)
 for i, (label, target, subtitle) in enumerate(card_defs):
-    with rows[i%3]:
-        st.markdown(f"<div class='card'><b>{label}</b><br><span class='tiny'>{subtitle}</span><br><br>"
-                    f"<a href='/{target}' target='_self' style='text-decoration:none;'>"
-                    f"<button class='hero-btn' style='font-size:0.9rem;padding:0.5rem 1.4rem;'>Open</button>"
-                    f"</a></div>", unsafe_allow_html=True)
-
-
+    with rows[i % 3]:
+        st.markdown(
+            f"<div class='card'><b>{label}</b><br><span class='tiny'>{subtitle}</span><br><br>"
+            f"<a href='/{target}' target='_self' style='text-decoration:none;'>"
+            f"<button class='hero-btn' style='font-size:0.9rem;padding:0.5rem 1.4rem;'>Open</button>"
+            f"</a></div>",
+            unsafe_allow_html=True
+        )
